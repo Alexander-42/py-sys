@@ -11,25 +11,45 @@ class State:
                           "irq",
                           "softirq",
                           "steal",
-                          "quest",
-                          "quest_nice"]
+                          "guest",
+                          "guest_nice"]
         self.__prev_state_dict = {}
         self.__curr_state_dict = self.__parse_state_string(init_string)
+        self.__delta = {}
+        self.__curr_idle = int(self.__curr_state_dict["idle"]) + int(self.__curr_state_dict["iowait"])
+        self.__curr_busy = sum([int(val) for val in self.__curr_state_dict.values()]) - self.__curr_idle
+        self.__prev_busy = 0
+        self.__prev_idle = 0
 
     def __parse_state_string(self, state_string):
-        state_vals = state_string.split()
-        return {i:k for i,k in zip(self.__init_keys, state_vals) }
-        
+        state_vals = state_string.split()[1:]
+        return {i:k for i,k in zip(self.__init_keys, state_vals) }        
 
     def print_curr_state_dict_and_name(self):
         print(self.name)
         print(self.__curr_state_dict)
         print("--------")
 
+    def print_delta(self):
+        print(self.__delta)
+
+    def print_curr_busy(self):
+        print(self.__curr_busy)
+
+    def print_curr_idle(self):
+        print(self.__curr_idle)
+
     def update_state(self, state_string):
         self.__prev_state_dict = self.__curr_state_dict
+        self.__prev_busy = self.__curr_busy
+        self.__prev_idle = self.__curr_idle
         self.__curr_state_dict = self.__parse_state_string(state_string)
-        
+        self.__curr_idle = int(self.__curr_state_dict["idle"]) + int(self.__curr_state_dict["iowait"])
+        self.__curr_busy = sum([int(val) for val in self.__curr_state_dict.values()]) - self.__curr_idle
+
+    def calculate_delta(self):
+        for key in self.__curr_state_dict.keys():
+            self.__delta[f"{key}_del"] = int(self.__curr_state_dict[key]) - int(self.__prev_state_dict[key])
 
 def init_cpu_states(file):
     cpus = {}
@@ -48,7 +68,12 @@ def observe_state(cpus):
         this_cpu = cpus.get(line[0:4])
         if this_cpu:
             this_cpu.update_state(line)
-            print(this_cpu.print_curr_state_dict_and_name())
+            this_cpu.calculate_delta()
+            print(this_cpu.name)
+            print("Busy: ")
+            this_cpu.print_curr_busy()
+            print("Idle: ")
+            this_cpu.print_curr_idle()
         else:
             break
     file.close()
