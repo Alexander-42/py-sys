@@ -1,18 +1,23 @@
+INIT_KEYS=[
+    "user",
+    "nice",
+    "system",
+    "idle",
+    "iowait",
+    "irq",
+    "softirq",
+    "steal",
+    "guest",
+    "guest_nice"
+]
 
-class State:
+BAR_LENGTH = 80
+
+class CPUState:
     def __init__(self, init_string, name):
         self.name = name
         self.init_string = init_string
-        self.__init_keys = ["user",
-                          "nice",
-                          "system",
-                          "idle",
-                          "iowait",
-                          "irq",
-                          "softirq",
-                          "steal",
-                          "guest",
-                          "guest_nice"]
+        self.__init_keys = INIT_KEYS
         self.__prev_state_dict = {}
         self.__curr_state_dict = self.__parse_state_string(init_string)
         self.__delta = {}
@@ -24,20 +29,6 @@ class State:
     def __parse_state_string(self, state_string):
         state_vals = state_string.split()[1:]
         return {i:k for i,k in zip(self.__init_keys, state_vals) }        
-
-    def print_curr_state_dict_and_name(self):
-        print(self.name)
-        print(self.__curr_state_dict)
-        print("--------")
-
-    def print_delta(self):
-        print(self.__delta)
-
-    def print_curr_busy(self):
-        print(self.__curr_busy)
-
-    def print_curr_idle(self):
-        print(self.__curr_idle)
 
     def update_state(self, state_string):
         self.__prev_state_dict = self.__curr_state_dict
@@ -51,29 +42,45 @@ class State:
         for key in self.__curr_state_dict.keys():
             self.__delta[f"{key}_del"] = int(self.__curr_state_dict[key]) - int(self.__prev_state_dict[key])
 
+    def calculate_usage(self):
+        del_busy = self.__curr_busy-self.__prev_busy
+        del_idle = self.__curr_idle-self.__prev_idle
+        return 100*del_busy/(del_busy + del_idle)
+
+    def __cpu_usage_bar(self):
+        usage = self.calculate_usage()
+        num_bars = int((usage * BAR_LENGTH) // 100)
+        bar = "["
+        for _ in range(num_bars):
+            bar += "|"
+        for _ in range(num_bars, BAR_LENGTH):
+            bar += " "
+        bar += "]"
+
+        return bar, usage
+
+    def print_bar(self):
+        bar, usage = self.__cpu_usage_bar()
+        print(f"{bar} {self.name.strip()} {round(usage, 1)}%")
+
 def init_cpu_states(file):
     cpus = {}
 
     for line in file:
         if line[3] == ' ':
-            cpus[line[0:4]] = State(line, line[0:4])
+            cpus[line[0:4]] = CPUState(line, line[0:4])
         elif line[3].isnumeric():
-            cpus[line[0:4]] = State(line, line[0:4])
+            cpus[line[0:4]] = CPUState(line, line[0:4])
 
     return cpus
 
-def observe_state(cpus):
-    file = open("/proc/stat")
-    for line in file:
-        this_cpu = cpus.get(line[0:4])
-        if this_cpu:
-            this_cpu.update_state(line)
-            this_cpu.calculate_delta()
-            print(this_cpu.name)
-            print("Busy: ")
-            this_cpu.print_curr_busy()
-            print("Idle: ")
-            this_cpu.print_curr_idle()
-        else:
-            break
+def observe_cpu_state(filepath, cpus):
+    with open(filepath, mode="r") as file:
+        for line in file:
+            this_cpu = cpus.get(line[0:4])
+            if this_cpu:
+                this_cpu.update_state(line)
+                this_cpu.print_bar()
+            else:
+                break
     file.close()
