@@ -1,6 +1,7 @@
 import cpu.visualize_cpu as visualize_cpu
 import cpu.utils as cpu_utils
 import argparse
+import terminal
 
 def arg_parser():
     parser = argparse.ArgumentParser(description="System monitoring written in python")
@@ -22,11 +23,12 @@ def arg_parser():
 
 def main():
     args = arg_parser()
+    tui = terminal.SysTui(0, 10)
 
     if args.core == -1:
-        visualize_cpu.visualize_all(args.bar)
+        visualize_cpu.visualize_all(args.bar, tui)
     elif cpu_utils.is_viable_core(args.core):
-        visualize_cpu.visualize_core(args.core, args.bar)
+        visualize_cpu.visualize_core(args.core, args.bar, tui)
     else:
         cpu_utils.invalid_core_number(args)
 
