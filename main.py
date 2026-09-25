@@ -23,7 +23,7 @@ def arg_parser():
 
 def main():
     args = arg_parser()
-    tui = terminal.SysTui(0, 10)
+    tui = terminal.SysTui(0, cpu_utils.CORES)
 
     if args.core == -1:
         visualize_cpu.visualize_all(args.bar, tui)

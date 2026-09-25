@@ -14,8 +14,8 @@ def visualize_all(bar_on, tui):
         while True:
             terminal_width = tui.check_terminal(initial_width)
             initial_width = terminal_width
-            state_handlers.observe_whole_cpu_usage(bar_on, terminal_width, cpu_utils.PROC_STAT_PATH, cpus, cpu)
-            time.sleep(.5)
+            state_handlers.observe_whole_cpu_usage(bar_on, terminal_width, cpu_utils.PROC_STAT_PATH, cpus, cpu, tui)
+            time.sleep(.35)
     except KeyboardInterrupt:
         tui.cleanup()
         print("Process safely exited by user")
@@ -23,13 +23,13 @@ def visualize_all(bar_on, tui):
 def visualize_core(core_no, bar_on, tui):
     with open(cpu_utils.PROC_STAT_PATH, mode="r") as file:
         core = state_handlers.init_single_core(file, core_no)
-        time.sleep(0.5)
+        time.sleep(0.35)
     file.close()
     try:
         initial_width = tui.initialize_terminal()
         while True:
             terminal_width = tui.check_terminal(initial_width)
-            state_handlers.observe_single_core(bar_on, terminal_width, cpu_utils.PROC_STAT_PATH, core)
+            state_handlers.observe_single_core(bar_on, terminal_width, cpu_utils.PROC_STAT_PATH, core, tui)
             initial_width = terminal_width
             time.sleep(0.5)
     except KeyboardInterrupt:

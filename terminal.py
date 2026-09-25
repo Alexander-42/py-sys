@@ -49,6 +49,37 @@ class SysTui:
     def __get_cols(self):
         return shutil.get_terminal_size().columns
 
+    def __usage_bar(self, label, percent, terminal_width):
+        bar_width = terminal_width - len(label) - 10
+        num_bars = int((percent * bar_width) // 100)
+        return "[" + num_bars*"|" + (bar_width - num_bars)*" " + "]"
+
+    def __line_whitespace_format(self, print_string, terminal_width):
+        print_string += (terminal_width - len(print_string))*' '
+        return print_string
+
+    def __format_row(self, row, terminal_width, bar_on):
+        label, _, percent, status = row
+        if not status:
+            row_string = f"{label} is offline"
+        elif bar_on:
+            bar = self.__usage_bar(label, percent, terminal_width)
+            row_string = f"{bar} {label} {round(percent, 1)}%"
+        else:
+            row_string = f"{label} usage is at {round(percent, 1)}%"
+        return self.__line_whitespace_format(row_string, terminal_width)
+
+    def print_row(self, row, terminal_width, bar_on):
+        row_string = self.__format_row(row, terminal_width, bar_on)
+        if row[1] == self.selector_line:
+            print(f"\x1b[7m{row_string}\x1b[0m")
+        else:
+            print(row_string)
+
+    def print_rows(self, rows, terminal_width, bar_on):
+        for row in rows:
+            self.print_row(row, terminal_width, bar_on)
+
     def initialize_terminal(self):
         self.__old_settings = termios.tcgetattr(self.__fd)
         tty.setcbreak(self.__fd)
@@ -62,7 +93,6 @@ class SysTui:
             termios.tcsetattr(self.__fd, termios.TCSADRAIN, self.__old_settings)
         print('\x1b[?1049l')
         print('\x1b[?25h')
-        print('\x1b[H')
 
     def check_terminal(self, prev_width):
         self.__detect_input()

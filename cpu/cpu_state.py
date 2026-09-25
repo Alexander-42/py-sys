@@ -1,8 +1,9 @@
 import cpu.utils as u
 
 class CPUState:
-    def __init__(self, init_string, name):
+    def __init__(self, init_string, name, line):
         self.name = name
+        self.line = line
         self.__online = True
         self.init_string = init_string
         self.__init_keys = u.INIT_KEYS
@@ -53,67 +54,13 @@ class CPUState:
             key_usages.append(100*self.__delta[key]/(sum(self.__delta.values())))
         return zip(u.INIT_KEYS, key_usages)
 
-    def __cpu_usage_bar(self, terminal_width):
-        terminal_width = terminal_width - 15
-        usage = self.calculate_core_usage()
-        num_bars = int((usage * terminal_width) // 100)
-        bar = "["
-        for _ in range(num_bars):
-            bar += "|"
-        for _ in range(num_bars, terminal_width):
-            bar += " "
-        bar += "]"
+    def core_row(self):
+        if not self.is_online() or self.calculate_del_tot() == 0:
+            return (self.name.strip(), self.line, 0.0, False)
+        return (self.name.strip(), self.line, self.calculate_core_usage(), True)
 
-        return bar, usage
-        
-    def __key_usage_bars(self, terminal_width):
-        bars = []
-        terminal_width = terminal_width - 20
-        key_usage_pairs = self.calculate_key_usage()
-        for key, usage in key_usage_pairs:
-            num_bars = int((usage * terminal_width) // 100)
-            bar = "["
-            for _ in range(num_bars):
-                bar += "|"
-            for _ in range(num_bars, terminal_width):
-                bar += " "
-            bar += "]"
-            bars.append((bar, usage, key))
-        return bars
-
-    def __line_whitespace_format(self, print_string, terminal_width):
-        print_string += (terminal_width-len(print_string))*' '
-        return print_string
-    
-    def print_core_usage(self, terminal_width):
-            if self.is_online():
-                usage = self.calculate_core_usage()
-                usage_string = f"{self.name} usage is at {round(usage,1)}%"
-                print(self.__line_whitespace_format(usage_string, terminal_width))
-            else:
-                print(f"Core {self.name} is offline")
-    
-    def print_key_usages(self, terminal_width):
-        if self.is_online():
-            key_usage_pairs = self.calculate_key_usage()
-            print(f'Key as percentage of core usage')
-            for key, usage in key_usage_pairs:
-                usage_string = f"{key}: {round(usage, 1)}%"
-                print(self.__line_whitespace_format(usage_string, terminal_width))
-        
-
-    def print_core_bar(self, terminal_width):
-        if self.is_online() and self.calculate_del_tot() != 0:
-            bar, usage = self.__cpu_usage_bar(terminal_width)
-            bar_string = f"{bar} {self.name.strip()} {round(usage, 1)}%"
-            print(self.__line_whitespace_format(bar_string, terminal_width))
-        else:
-            bar_string = f"{self.name.strip()} is offline"
-            print(self.__line_whitespace_format(bar_string, terminal_width))
-
-    def print_key_bars(self, terminal_width):
-        if self.is_online():
-            bars = self.__key_usage_bars(terminal_width)
-            bar_strings = [ f"{bar[0]} {bar[2].strip()} {round(bar[1],1)}%" for bar in bars ]
-            for bstring in bar_strings:
-                print(self.__line_whitespace_format(bstring, terminal_width))
+    def key_rows(self):
+        if not self.is_online() or sum(self.__delta.values()) == 0:
+            return [ (key, self.line + 1 + i, 0.0, False) for i, key in enumerate(u.INIT_KEYS) ]
+        return [ (key, self.line + 1 + i, usage, True)
+                 for i, (key, usage) in enumerate(self.calculate_key_usage()) ]
