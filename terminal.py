@@ -46,8 +46,21 @@ class SysTui:
                 self.__action = True
             i += 1
 
+    def is_action(self):
+        if not self.__action:
+            return -1
+        self.__action = False
+        return self.selector_line
+
     def __get_cols(self):
         return shutil.get_terminal_size().columns
+
+    def get_width(self):
+        return self.__get_cols()
+
+    def clear_screen(self):
+        print('\x1b[2J')
+        print('\x1b[H')
 
     def __usage_bar(self, label, percent, terminal_width):
         bar_width = terminal_width - len(label) - 10
